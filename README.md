@@ -8,6 +8,17 @@ LLM provider is unavailable.
 
 Served through a **FastAPI** backend and a **Streamlit** chat UI.
 
+## Demo
+
+Grounded answer with inline source citations — every claim traces back to a document:
+
+![Streamlit chat UI — grounded answer with citations](assets/demo_ui.png)
+
+Source inspection and per-stage latency (which retriever found each chunk, timing per
+pipeline stage) — and the model correctly refusing to invent facts not in the context:
+
+![Source panel and per-stage latency](assets/demo_sources_latency.png)
+
 ## Architecture
 
 ```
