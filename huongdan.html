@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hướng dẫn Advanced RAG — Nguyễn Minh Trí</title>
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --surface: #ffffff;
+    --ink: #1e2430;
+    --muted: #5b6472;
+    --line: #e4dfd5;
+    --accent: #0f6b5c;
+    --accent-soft: #e2f0ec;
+    --accent2: #b4552d;
+    --accent2-soft: #f7e8df;
+    --code-bg: #1b2028;
+    --code-ink: #d8dee9;
+    --radius: 14px;
+    --shadow: 0 2px 12px rgba(30,36,48,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181f;
+      --surface: #1c222c;
+      --ink: #e8e6e1;
+      --muted: #9aa3b0;
+      --line: #2c3440;
+      --accent: #4fbfa8;
+      --accent-soft: #16332d;
+      --accent2: #e08a5e;
+      --accent2-soft: #3a251a;
+      --code-bg: #10141a;
+      --code-ink: #cfd6e0;
+      --shadow: 0 2px 12px rgba(0,0,0,.3);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--ink);
+    line-height: 1.7; font-size: 16.5px;
+  }
+  /* ---------- HERO ---------- */
+  .hero {
+    background: linear-gradient(135deg, #0f6b5c 0%, #0d4f45 55%, #143038 100%);
+    color: #f2f7f5; padding: 64px 24px 56px; text-align: center;
+  }
+  .hero h1 { font-size: clamp(1.8rem, 4.5vw, 3rem); font-weight: 800; letter-spacing: -.02em; }
+  .hero h1 em { font-style: italic; font-family: Georgia, serif; color: #ffd9a8; }
+  .hero p.sub { max-width: 720px; margin: 18px auto 0; font-size: 1.1rem; color: #c8ddd7; }
+  .badges { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .badge {
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25);
+    padding: 6px 16px; border-radius: 999px; font-size: .85rem; font-weight: 600;
+  }
+  .hero a.repo {
+    display: inline-block; margin-top: 28px; background: #ffd9a8; color: #143038;
+    font-weight: 700; text-decoration: none; padding: 12px 28px; border-radius: 999px;
+    transition: transform .15s ease;
+  }
+  .hero a.repo:hover { transform: translateY(-2px); }
+  /* ---------- NAV ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 50; background: var(--surface);
+    border-bottom: 1px solid var(--line); box-shadow: var(--shadow);
+    overflow-x: auto; white-space: nowrap;
+  }
+  nav .inner { max-width: 980px; margin: 0 auto; padding: 0 16px; display: flex; gap: 4px; }
+  nav a {
+    display: inline-block; padding: 13px 14px; color: var(--muted);
+    text-decoration: none; font-size: .88rem; font-weight: 600; border-bottom: 3px solid transparent;
+  }
+  nav a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  /* ---------- LAYOUT ---------- */
+  main { max-width: 980px; margin: 0 auto; padding: 24px 20px 80px; }
+  section { margin-top: 56px; scroll-margin-top: 70px; }
+  h2 {
+    font-size: 1.7rem; font-weight: 800; letter-spacing: -.01em;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+  }
+  h2 .num {
+    background: var(--accent); color: #fff; width: 40px; height: 40px; flex: none;
+    border-radius: 12px; display: grid; place-items: center; font-size: 1.05rem;
+  }
+  h3 { margin: 26px 0 10px; font-size: 1.15rem; }
+  p { margin: 10px 0; }
+  p.lead { font-size: 1.06rem; color: var(--muted); }
+  strong { color: var(--ink); }
+  a { color: var(--accent); }
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px 26px; box-shadow: var(--shadow); margin: 16px 0;
+  }
+  .callout {
+    border-left: 5px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px; margin: 18px 0;
+  }
+  .callout.warn { border-left-color: var(--accent2); background: var(--accent2-soft); }
+  /* ---------- GRID CARDS ---------- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 20px 0; }
+  .feature {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 20px 22px; box-shadow: var(--shadow);
+  }
+  .feature .icon { font-size: 1.7rem; }
+  .feature h4 { margin: 10px 0 6px; font-size: 1.03rem; }
+  .feature p { font-size: .93rem; color: var(--muted); margin: 0; }
+  /* ---------- CODE ---------- */
+  pre {
+    background: var(--code-bg); color: var(--code-ink); border-radius: 12px;
+    padding: 18px 20px; overflow-x: auto; font-size: .88rem; line-height: 1.6;
+    margin: 14px 0; font-family: Consolas, "Cascadia Code", monospace;
+  }
+  code.inline {
+    background: var(--accent-soft); color: var(--accent); padding: 2px 7px;
+    border-radius: 6px; font-size: .88em; font-family: Consolas, monospace;
+  }
+  pre .c { color: #7c8ba1; }   /* comment */
+  pre .k { color: #8fd3c7; }   /* command */
+  /* ---------- PIPELINE DIAGRAM ---------- */
+  .pipe { display: flex; flex-direction: column; gap: 0; margin: 22px 0; }
+  .pipe-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .pipe-box {
+    flex: 1; min-width: 220px; background: var(--surface); border: 2px solid var(--accent);
+    border-radius: 12px; padding: 14px 18px; text-align: center;
+  }
+  .pipe-box.alt { border-color: var(--accent2); }
+  .pipe-box b { display: block; font-size: .98rem; }
+  .pipe-box span { font-size: .84rem; color: var(--muted); }
+  .pipe-arrow { text-align: center; font-size: 1.5rem; color: var(--accent); padding: 4px 0; }
+  /* ---------- TABLES ---------- */
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); font-size: .95rem; }
+  th { background: var(--accent); color: #fff; text-align: left; padding: 12px 16px; font-size: .9rem; }
+  td { padding: 11px 16px; border-top: 1px solid var(--line); vertical-align: top; }
+  tr:nth-child(even) td { background: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%); }
+  td.hl { font-weight: 800; color: var(--accent); }
+  /* ---------- FILE TREE ---------- */
+  .tree { font-family: Consolas, monospace; font-size: .87rem; }
+  .tree .dir { color: var(--accent2); font-weight: 700; }
+  .tree .note { color: #7c8ba1; }
+  .tree .star { color: #e5b100; }
+  /* ---------- STEPS ---------- */
+  ol.steps { counter-reset: step; list-style: none; margin: 20px 0; }
+  ol.steps > li {
+    position: relative; padding: 4px 0 22px 58px; counter-increment: step;
+    border-left: 2px dashed var(--line); margin-left: 20px;
+  }
+  ol.steps > li:last-child { border-left-color: transparent; }
+  ol.steps > li::before {
+    content: counter(step); position: absolute; left: -21px; top: 0;
+    width: 40px; height: 40px; border-radius: 50%; background: var(--accent);
+    color: #fff; font-weight: 800; display: grid; place-items: center;
+  }
+  ol.steps b.t { font-size: 1.04rem; }
+  /* ---------- Q&A ---------- */
+  details {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    margin: 12px 0; box-shadow: var(--shadow); overflow: hidden;
+  }
+  summary {
+    cursor: pointer; padding: 16px 20px; font-weight: 700; list-style: none;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  summary::after { content: "＋"; color: var(--accent); font-size: 1.2rem; flex: none; }
+  details[open] summary::after { content: "－"; }
+  details .body { padding: 0 20px 18px; color: var(--muted); }
+  details .body strong { color: var(--ink); }
+  /* ---------- FOOTER ---------- */
+  footer {
+    text-align: center; padding: 40px 20px; color: var(--muted);
+    border-top: 1px solid var(--line); margin-top: 60px; font-size: .92rem;
+  }
+  @media (max-width: 640px) {
+    body { font-size: 15.5px; }
+    .hero { padding: 44px 18px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= HERO ================= -->
+<div class="hero">
+  <h1>Advanced RAG — <em>Hướng dẫn từ A đến Z</em></h1>
+  <p class="sub">Hybrid Search (FAISS + BM25) · Reciprocal Rank Fusion · Cross-Encoder Re-ranking ·
+  FastAPI + Streamlit · DeepSeek LLM — giải thích cặn kẽ cho người mới, kèm kịch bản demo phỏng vấn.</p>
+  <div class="badges">
+    <span class="badge">🐍 Python 3.10+</span>
+    <span class="badge">⚡ FastAPI</span>
+    <span class="badge">🔎 FAISS + BM25</span>
+    <span class="badge">🎯 Cross-Encoder Rerank</span>
+    <span class="badge">🤖 DeepSeek</span>
+    <span class="badge">📊 Hit-rate 100%</span>
+  </div>
+  <a class="repo" href="https://github.com/Boothill2001/RAG_project" target="_blank">⭐ Xem source trên GitHub</a>
+</div>
+
+<!-- ================= NAV ================= -->
+<nav><div class="inner">
+  <a href="#rag">1. RAG là gì</a>
+  <a href="#xin">2. Điểm "xịn"</a>
+  <a href="#files">3. Từng file</a>
+  <a href="#flow">4. Luồng chạy</a>
+  <a href="#setup">5. Cài đặt</a>
+  <a href="#demo">6. Chạy demo</a>
+  <a href="#eval">7. Số liệu</a>
+  <a href="#interview">8. Demo phỏng vấn</a>
+  <a href="#qa">9. Q&amp;A</a>
+  <a href="#bugs">10. Lỗi hay gặp</a>
+</div></nav>
+
+<main>
+
+<!-- ================= 1. RAG ================= -->
+<section id="rag">
+  <h2><span class="num">1</span> RAG là gì? (giải thích như cho người chưa biết gì)</h2>
+  <p class="lead">Tưởng tượng ChatGPT là một người <strong>rất thông minh nhưng trí nhớ đóng băng</strong>
+  tại thời điểm nó được train. Hỏi nó về tài liệu nội bộ công ty bạn → nó không biết → nó <strong>bịa</strong> (hallucination).</p>
+
+  <div class="card">
+    <p><strong>RAG (Retrieval-Augmented Generation)</strong> giải quyết bằng cách chia làm 2 bước:</p>
+    <p>1️⃣ <strong>Retrieval (tìm kiếm)</strong> — khi user hỏi, hệ thống đi <em>tìm những đoạn tài liệu
+    liên quan nhất</em> trong kho tri thức (knowledge base) của bạn.</p>
+    <p>2️⃣ <strong>Generation (sinh câu trả lời)</strong> — đưa các đoạn đó vào prompt và ra lệnh cho LLM:
+    <em>"Chỉ được trả lời dựa trên các đoạn này, kèm trích nguồn, không biết thì nói không biết."</em></p>
+  </div>
+
+  <div class="callout">
+    💡 Kết quả: câu trả lời <strong>chính xác, có nguồn, cập nhật được</strong> mà không cần train lại model.
+    Đây là kiến trúc phổ biến nhất trong AI doanh nghiệp — và là thứ nhà tuyển dụng AI Engineer hỏi nhiều nhất.
+  </div>
+</section>
+
+<!-- ================= 2. ĐIỂM XỊN ================= -->
+<section id="xin">
+  <h2><span class="num">2</span> Project này "xịn" hơn RAG cơ bản ở đâu?</h2>
+  <p>RAG tutorial trên mạng chỉ có: embed câu hỏi → tìm vector gần nhất → đưa vào LLM.
+  Project này làm <strong>4 nâng cấp giống hệ thống production thật</strong> — khớp từng dòng trong CV:</p>
+
+  <div class="grid">
+    <div class="feature">
+      <div class="icon">✂️</div>
+      <h4>Semantic Chunking</h4>
+      <p>Cắt tài liệu theo <b>heading / đoạn văn</b> (ranh giới ngữ nghĩa) thay vì cắt cứng mỗi 500 ký tự
+      → mỗi chunk nói đúng 1 chủ đề → embedding "sắc nét" hơn.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🔀</div>
+      <h4>Hybrid Search</h4>
+      <p>Chạy song song 2 kiểu tìm: <b>dense</b> (FAISS — bắt câu cùng ý khác từ) và <b>sparse</b>
+      (BM25 — bắt từ khóa chính xác, mã lỗi, tên riêng). Trộn kết quả bằng <b>RRF</b>: cộng điểm 1/(60+hạng).</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🎯</div>
+      <h4>Re-ranking</h4>
+      <p>Lấy ~20 ứng viên, cho qua <b>cross-encoder</b> — model đọc <em>cả câu hỏi lẫn đoạn văn cùng lúc</em>
+      nên chấm điểm chính xác hơn nhiều → chọn top 5 thật sự liên quan.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🛡️</div>
+      <h4>Graceful Fallback</h4>
+      <p>Không có key / LLM sập / hết tiền → hệ thống <b>không chết</b>, trả về chế độ <em>extractive</em>:
+      trích nguyên văn đoạn liên quan nhất. Demo phỏng vấn không bao giờ đứng hình.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    📏 Ngoài ra còn có <strong>script đo lường (evaluation)</strong> chứng minh bằng con số rằng
+    hybrid tốt hơn dense-only — kể trong phỏng vấn cực kỳ ăn điểm (xem mục 7).
+  </div>
+</section>
+
+<!-- ================= 3. FILES ================= -->
+<section id="files">
+  <h2><span class="num">3</span> Từng file làm gì?</h2>
+  <div class="card tree">
+<pre style="background:transparent;color:inherit;padding:0;margin:0">
+RAG_project/
+├── <span class="dir">data/docs/</span>            <span class="note">← Kho tri thức: 8 tài liệu tiếng Anh về AI/ML/RAG</span>
+│
+├── <span class="dir">src/rag/</span>              <span class="note">← TRÁI TIM của project</span>
+│   ├── config.py         <span class="note">← Mọi cấu hình 1 chỗ: model, top_k, đọc API key từ .env</span>
+│   ├── chunking.py       <span class="note">← Semantic chunking theo heading/đoạn văn</span>
+│   ├── embeddings.py     <span class="note">← Text → vector 384 chiều (chạy local, FREE)</span>
+│   ├── vectorstore.py    <span class="note">← Lưu/tìm vector bằng FAISS (thư viện của Meta)</span>
+│   ├── retrieval.py      <span class="star">⭐</span> <span class="note">← Hybrid: FAISS + BM25 → RRF → cross-encoder rerank</span>
+│   ├── generation.py     <span class="note">← Gọi DeepSeek trả lời có trích nguồn; lỗi → fallback</span>
+│   └── pipeline.py       <span class="note">← Gom thành 1 hàm ask() → {answer, sources, timings}</span>
+│
+├── <span class="dir">scripts/</span>
+│   ├── build_index.py    <span class="note">← Chạy 1 lần để "nạp kiến thức": docs → vectors → index/</span>
+│   └── evaluate.py       <span class="note">← Đo hit-rate@3 + MRR: dense vs hybrid vs hybrid+rerank</span>
+│
+├── <span class="dir">api/</span>main.py           <span class="note">← FastAPI: POST /ask, GET /health, Swagger tại /docs</span>
+├── <span class="dir">ui/</span>app.py             <span class="note">← Giao diện chat Streamlit (gọi API ở trên)</span>
+│
+├── requirements.txt      <span class="note">← Danh sách thư viện cần cài</span>
+├── .env.example          <span class="note">← Mẫu cấu hình key (copy thành .env rồi điền)</span>
+└── .gitignore            <span class="note">← Chặn commit .env (bảo mật key!) và index/</span>
+</pre>
+  </div>
+</section>
+
+<!-- ================= 4. FLOW ================= -->
+<section id="flow">
+  <h2><span class="num">4</span> Luồng chạy khi user hỏi 1 câu</h2>
+  <div class="pipe">
+    <div class="pipe-row">
+      <div class="pipe-box" style="border-style:dashed"><b>❓ Câu hỏi của user</b><span>"Why does hybrid search beat dense-only?"</span></div>
+    </div>
+    <div class="pipe-arrow">↓ chạy song song ↓</div>
+    <div class="pipe-row">
+      <div class="pipe-box"><b>🧠 Dense search (FAISS)</b><span>embed câu hỏi → tìm 20 chunk gần nghĩa nhất</span></div>
+      <div class="pipe-box"><b>🔤 Sparse search (BM25)</b><span>tách từ khóa → tìm 20 chunk khớp từ nhất</span></div>
+    </div>
+    <div class="pipe-arrow">↓</div>
+    <div class="pipe-row">
+      <div class="pipe-box alt"><b>🔀 Reciprocal Rank Fusion</b><span>trộn 2 bảng xếp hạng: điểm = Σ 1/(60 + hạng)</span></div>
+    </div>
+    <div class="pipe-arrow">↓</div>
+    <div class="pipe-row">
+      <div class="pipe-box alt"><b>🎯 Cross-encoder re-rank</b><span>chấm lại ~20 ứng viên → giữ top 5</span></div>
+    </div>
+    <div class="pipe-arrow">↓</div>
+    <div class="pipe-row">
+      <div class="pipe-box"><b>🤖 DeepSeek sinh câu trả lời</b><span>prompt grounded: chỉ dùng context, trích nguồn [1][2], không biết thì nói không biết</span></div>
+    </div>
+    <div class="pipe-arrow">↓ nếu LLM lỗi ↓</div>
+    <div class="pipe-row">
+      <div class="pipe-box" style="border-style:dashed"><b>🛡️ Extractive fallback</b><span>trích nguyên văn top passages — không bao giờ trả lỗi 500</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 5. SETUP ================= -->
+<section id="setup">
+  <h2><span class="num">5</span> Cài đặt từng bước (Windows)</h2>
+  <div class="callout warn">⚠️ Yêu cầu: <strong>Python 3.10+</strong> — tải tại python.org, nhớ tick <em>"Add to PATH"</em> khi cài.</div>
+  <p>Mở PowerShell tại thư mục project, chạy lần lượt:</p>
+
+  <ol class="steps">
+    <li>
+      <b class="t">Tạo môi trường ảo</b> — cái "hộp" chứa thư viện riêng cho project, không đụng Python hệ thống.
+      <pre><span class="k">python -m venv .venv</span></pre>
+    </li>
+    <li>
+      <b class="t">Kích hoạt môi trường ảo</b> — dòng lệnh sẽ hiện <code class="inline">(.venv)</code> ở đầu.
+      <pre><span class="k">.venv\Scripts\activate</span></pre>
+    </li>
+    <li>
+      <b class="t">Cài thư viện</b> — lần đầu tải ~500MB (có PyTorch), chờ vài phút.
+      <pre><span class="k">pip install -r requirements.txt</span></pre>
+    </li>
+    <li>
+      <b class="t">Cấu hình API key</b> — <em>không bắt buộc</em>: không có key vẫn chạy được ở chế độ fallback.
+      <pre><span class="k">copy .env.example .env</span>
+<span class="c"># Mở .env bằng Notepad, thay your_deepseek_api_key_here bằng key thật</span>
+<span class="c"># Lấy key tại platform.deepseek.com — nạp $2 là dùng thoải mái</span></pre>
+    </li>
+    <li>
+      <b class="t">Build index — "nạp kiến thức"</b> — lần đầu tải model embedding ~90MB.
+      <pre><span class="k">python scripts/build_index.py</span>
+<span class="c"># Thấy "Done in X.Xs. Index files written to ...\index" là OK ✅</span></pre>
+    </li>
+  </ol>
+</section>
+
+<!-- ================= 6. DEMO ================= -->
+<section id="demo">
+  <h2><span class="num">6</span> Chạy demo</h2>
+  <p>Cần <strong>2 cửa sổ terminal</strong> (đều đã activate <code class="inline">.venv</code>):</p>
+  <div class="card">
+    <h3 style="margin-top:0">🖥️ Terminal 1 — API server</h3>
+    <pre><span class="k">uvicorn api.main:app --port 8000</span>
+<span class="c"># "Application startup complete" là OK → mở http://localhost:8000/docs xem Swagger UI</span></pre>
+    <h3>💬 Terminal 2 — Giao diện chat</h3>
+    <pre><span class="k">streamlit run ui/app.py</span>
+<span class="c"># Trình duyệt tự mở http://localhost:8501</span></pre>
+  </div>
+  <div class="callout">
+    ✅ Gõ thử: <code class="inline">Why does hybrid search beat dense-only retrieval?</code><br>
+    → nhận câu trả lời kèm nguồn <strong>[1][2]</strong>, bấm mở <strong>📚 Sources</strong> để xem chunk nào do
+    <code class="inline">dense</code> tìm ra, chunk nào do <code class="inline">bm25</code>, và độ trễ từng bước.
+  </div>
+</section>
+
+<!-- ================= 7. EVAL ================= -->
+<section id="eval">
+  <h2><span class="num">7</span> Số liệu đo được (để kể khi phỏng vấn)</h2>
+  <pre><span class="k">python scripts/evaluate.py</span></pre>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Cấu hình</th><th>Hit-rate@3</th><th>MRR@3</th></tr>
+    <tr><td>Dense-only (FAISS)</td><td>93.8%</td><td>0.938</td></tr>
+    <tr><td>Hybrid (dense + BM25, RRF)</td><td class="hl">100.0%</td><td class="hl">1.000</td></tr>
+    <tr><td>Hybrid + cross-encoder re-ranking</td><td class="hl">100.0%</td><td>0.969</td></tr>
+  </table>
+  </div>
+  <div class="callout">
+    🗣️ <strong>Câu chuyện để kể:</strong> <em>"Hybrid cứu được câu hỏi mà dense-only trượt. Corpus demo nhỏ
+    (43 chunks) nên hybrid đã chạm trần 100%, re-ranker không còn chỗ để cộng thêm — giá trị của re-ranker
+    tăng dần theo kích thước corpus, khi kết quả tầng 1 nhiễu hơn. Quan trọng là em có harness đo lường
+    để chứng minh điều đó trên corpus thật."</em>
+  </div>
+  <p>⏱️ Độ trễ đo được (CPU, sau warm-up): retrieval <strong>~9ms</strong> · BM25 <strong>&lt;1ms</strong> ·
+  re-rank <strong>~380ms</strong> · DeepSeek generation <strong>~1–3s</strong>.</p>
+</section>
+
+<!-- ================= 8. INTERVIEW ================= -->
+<section id="interview">
+  <h2><span class="num">8</span> 🎯 Kịch bản demo phỏng vấn (5 phút ăn điểm)</h2>
+  <ol class="steps">
+    <li><b class="t">Mở Streamlit, hỏi 1 câu</b> → chỉ vào câu trả lời có trích nguồn [1][2]:
+      <em>"Mọi câu trả lời đều grounded — audit ngược về đúng đoạn tài liệu được."</em></li>
+    <li><b class="t">Mở panel Sources</b> → chỉ vào <code class="inline">found by: dense / bm25</code>:
+      <em>"Đây là hybrid search — em chạy song song semantic và lexical, trộn bằng RRF."</em></li>
+    <li><b class="t">Tắt toggle "Cross-encoder re-ranking"</b> ở sidebar, hỏi lại cùng câu → so sánh nguồn thay đổi:
+      <em>"Re-ranker quyết định chunk nào thật sự vào prompt."</em></li>
+    <li><b class="t">Chạy <code class="inline">python scripts/evaluate.py</code></b> → chỉ vào bảng số:
+      <em>"Em đo hit-rate@3 bằng ablation — hybrid cao hơn dense-only rõ rệt."</em></li>
+    <li><b class="t">Mở http://localhost:8000/docs</b> → <em>"Backend FastAPI async, Pydantic schema, health check,
+      timing metrics từng stage — LLM provider sập thì degrade sang extractive chứ không trả 500."</em>
+      <br>💥 Chốt hạ: đổi tên <code class="inline">DEEPSEEK_KEY</code> trong .env → restart API → hỏi lại →
+      badge chuyển sang <strong>"Extractive fallback"</strong> mà demo vẫn sống.</li>
+  </ol>
+</section>
+
+<!-- ================= 9. QA ================= -->
+<section id="qa">
+  <h2><span class="num">9</span> Câu hỏi phỏng vấn thường gặp (bấm để mở)</h2>
+
+  <details>
+    <summary>Tại sao dùng hybrid mà không dùng dense-only?</summary>
+    <div class="body"><p>Embedding yếu với token lạ (mã sản phẩm, mã lỗi, viết tắt) vì model chưa từng học;
+    BM25 yếu khi user diễn đạt khác từ ngữ trong tài liệu. Chạy cả hai rồi fuse bằng RRF lấy được điểm mạnh
+    của cả hai — benchmark doanh nghiệp thường <strong>tăng recall 10–25%</strong>.</p></div>
+  </details>
+
+  <details>
+    <summary>RRF là gì, sao không cộng thẳng điểm?</summary>
+    <div class="body"><p>Điểm BM25 (0→∞) và cosine (−1→1) <strong>khác thang đo</strong> — cộng thẳng phải normalize
+    và tune trọng số. RRF chỉ dùng <strong>thứ hạng</strong>: score = Σ 1/(60 + rank) — miễn nhiễm khác thang đo,
+    không cần tune, là chuẩn de-facto trong production.</p></div>
+  </details>
+
+  <details>
+    <summary>Bi-encoder vs cross-encoder khác gì nhau?</summary>
+    <div class="body"><p><strong>Bi-encoder</strong> embed câu hỏi và tài liệu <em>riêng rẽ</em> rồi so cosine —
+    nhanh (precompute được) nhưng hai bên không "nhìn thấy nhau". <strong>Cross-encoder</strong> ghép cả hai vào
+    một input, mọi token attend lẫn nhau — chính xác hơn hẳn nhưng chậm, nên chỉ dùng re-rank ~20 ứng viên cuối.</p></div>
+  </details>
+
+  <details>
+    <summary>Làm sao đo chất lượng một hệ RAG?</summary>
+    <div class="body"><p>Tách 2 tầng: <strong>retrieval</strong> đo hit-rate@k / MRR trên bộ câu hỏi có gán nguồn đúng;
+    <strong>generation</strong> đo faithfulness / answer relevance bằng LLM-as-judge (RAGAS, TruLens).
+    Project này có <code>scripts/evaluate.py</code> làm ablation retrieval.</p></div>
+  </details>
+
+  <details>
+    <summary>Đưa lên production thì cần thêm gì?</summary>
+    <div class="body"><p>Thay FAISS bằng vector DB có filtering + replication (Qdrant/Pinecone); thêm caching
+    (embedding, answer); auth + rate limiting; Docker + K8s + CI/CD; observability (trace từng stage, cost tracking);
+    index rebuild theo blue-green; chống prompt injection từ tài liệu.</p></div>
+  </details>
+
+  <details>
+    <summary>Sao lại chọn DeepSeek?</summary>
+    <div class="body"><p>API tương thích chuẩn OpenAI (đổi provider chỉ 1 dòng config), rẻ, chất lượng tốt.
+    Kiến trúc <strong>không khóa vào provider nào</strong> — swap sang Claude/GPT chỉ cần sửa <code>config.py</code>.</p></div>
+  </details>
+
+  <details>
+    <summary>Semantic chunking hơn gì cắt cứng theo ký tự?</summary>
+    <div class="body"><p>Cắt cứng thường chém đôi câu văn, bảng, code block → chunk vô nghĩa, embedding nhiễu.
+    Cắt theo heading/đoạn văn giữ mỗi chunk về <strong>đúng 1 chủ đề</strong> → embedding sắc nét, retrieval
+    chính xác hơn. Vẫn cần cap kích thước tối đa + overlap để không mất ngữ cảnh ở ranh giới.</p></div>
+  </details>
+</section>
+
+<!-- ================= 10. BUGS ================= -->
+<section id="bugs">
+  <h2><span class="num">10</span> Lỗi thường gặp &amp; cách sửa</h2>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Lỗi</th><th>Nguyên nhân &amp; cách sửa</th></tr>
+    <tr><td><code class="inline">Index not found...</code></td><td>Chưa build index → chạy <code class="inline">python scripts/build_index.py</code></td></tr>
+    <tr><td><code class="inline">ModuleNotFoundError: No module named 'rag'</code></td><td>Chạy script từ sai thư mục → phải đứng ở <strong>thư mục gốc project</strong></td></tr>
+    <tr><td>Streamlit báo "API offline"</td><td>Chưa chạy Terminal 1: <code class="inline">uvicorn api.main:app --port 8000</code></td></tr>
+    <tr><td>Trả lời hiện "Extractive fallback"</td><td>Không có / sai <code class="inline">DEEPSEEK_KEY</code> trong .env — vẫn là feature, không phải bug 😄</td></tr>
+    <tr><td>pip cài chậm / lỗi</td><td>Thử <code class="inline">pip install -r requirements.txt --timeout 120</code>; cần mạng ổn định vì tải PyTorch</td></tr>
+  </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p><strong>Nguyễn Minh Trí</strong> — Senior AI Engineer (GenAI / LLM Applications)</p>
+  <p>📧 minhtri.cm2001@gmail.com · <a href="https://github.com/Boothill2001/RAG_project">github.com/Boothill2001/RAG_project</a></p>
+  <p style="margin-top:8px">Chúc bạn demo thành công và đậu phỏng vấn! 🚀</p>
+</footer>
+
+</body>
+</html>
