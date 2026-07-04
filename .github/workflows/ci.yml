@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-models-${{ hashFiles('src/rag/config.py') }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Unit tests (chunking, RRF fusion, config)
+        run: pytest tests/ -v
+
+      - name: Smoke test — build the search index end-to-end
+        run: python scripts/build_index.py
+
+      - name: Smoke test — hybrid retrieval answers a query
+        env:
+          # No LLM key in CI — pipeline must gracefully use extractive mode
+          DEEPSEEK_KEY: ""
+        run: |
+          python - <<'EOF'
+          import sys
+          sys.path.insert(0, "src")
+          from rag.pipeline import RAGPipeline
+
+          result = RAGPipeline().ask("What is hybrid search?")
+          assert result["sources"], "retrieval returned no sources"
+          assert result["mode"] == "extractive", "expected extractive fallback without a key"
+          assert result["answer"].strip(), "empty answer"
+          print("Smoke test OK — top source:", result["sources"][0]["source"])
+          EOF

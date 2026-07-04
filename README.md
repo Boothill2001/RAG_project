@@ -1,5 +1,7 @@
 # Advanced RAG — Hybrid Search + Cross-Encoder Re-ranking
 
+[![CI](https://github.com/Boothill2001/RAG_project/actions/workflows/ci.yml/badge.svg)](https://github.com/Boothill2001/RAG_project/actions/workflows/ci.yml)
+
 A production-style **Retrieval-Augmented Generation** pipeline demonstrating the
 retrieval techniques used in enterprise RAG systems: **semantic chunking**, **hybrid
 search** (dense + BM25 with Reciprocal Rank Fusion), **cross-encoder re-ranking**,
@@ -98,6 +100,28 @@ uvicorn api.main:app --port 8000
 # 5. Start the UI (new terminal)
 streamlit run ui/app.py
 ```
+
+### Run with Docker
+
+```bash
+docker compose up --build
+# API  -> http://localhost:8000/docs
+# UI   -> http://localhost:8501
+```
+
+First start downloads the embedding/re-ranker models (~300 MB) into a named volume
+and builds the index; subsequent starts are fast.
+
+### Run the tests
+
+```bash
+pytest tests/ -v          # unit tests: chunking, RRF fusion, config parsing
+python scripts/evaluate.py  # retrieval ablation metrics
+```
+
+CI (GitHub Actions) runs the unit tests plus an end-to-end smoke test on every push:
+build the index, run a hybrid query, and verify the extractive fallback path works
+without an LLM key.
 
 Or query the API directly:
 
