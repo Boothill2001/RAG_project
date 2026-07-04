@@ -10,6 +10,10 @@ LLM provider is unavailable.
 
 Served through a **FastAPI** backend and a **Streamlit** chat UI.
 
+> 🤖 **Part of a two-project ecosystem:** this RAG API is consumed as an MCP tool by my
+> [LangGraph Agent project](https://github.com/Boothill2001/AI_AGENT_LANGGHAPH) —
+> RAG is the knowledge layer, the agent is the orchestration layer.
+
 ## Demo
 
 Grounded answer with inline source citations — every claim traces back to a document:
